@@ -1,20 +1,18 @@
-// ==================== GLOBAL STATE ====================
-// Tracks the currently logged-in user throughout the application
+
 let currentUser = null;
 
 // Storage key for localStorage persistence
 const STORAGE_KEY = 'ipt_demo_v1';
 
-// Database structure - holds all application data in memory
+
 window.db = {
-    accounts: [],      // User accounts with authentication data
-    departments: [],   // Company departments
-    employees: [],     // Employee records linked to accounts and departments
-    requests: []       // User requests with items and status
+    accounts: [],
+    departments: [],
+    employees: [],
+    requests: []
 };
 
-// ==================== PHASE 0: INITIALIZATION ====================
-// Initializes the app when DOM is fully loaded
+
 document.addEventListener('DOMContentLoaded', () => {
     // Load data from localStorage
     loadFromStorage();
@@ -48,8 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('hashchange', handleRouting);
 });
 
-// ==================== PHASE 4: DATA PERSISTENCE ====================
-// Loads database from localStorage or seeds default data
+
 function loadFromStorage() {
     try {
         // Retrieve stored data
@@ -68,7 +65,7 @@ function loadFromStorage() {
     }
 }
 
-// Saves entire database to localStorage
+
 function saveToStorage() {
     try {
         // Convert database object to JSON string and store
@@ -80,7 +77,6 @@ function saveToStorage() {
     }
 }
 
-// Seeds database with initial data (admin account and departments)
 function seedDatabase() {
     window.db = {
         accounts: [
@@ -105,7 +101,7 @@ function seedDatabase() {
     saveToStorage();
 }
 
-// ==================== PHASE 2: CLIENT-SIDE ROUTING ====================
+
 // Changes URL hash to navigate between pages without reloading
 function navigateTo(hash) {
     // Updates hash which triggers hashchange event
@@ -197,7 +193,7 @@ function handleRouting() {
     }
 }
 
-// ==================== PHASE 3D: AUTH STATE MANAGEMENT ====================
+
 // Updates global state and UI based on authentication status
 function setAuthState(isAuth, user = null) {
     // Update global current user
@@ -226,7 +222,7 @@ function setAuthState(isAuth, user = null) {
     }
 }
 
-// ==================== PHASE 8: EVENT LISTENER SETUP ====================
+
 // Centralizes all event listener initialization
 function initializeEventListeners() {
     // Registration form submission
@@ -262,7 +258,7 @@ function initializeEventListeners() {
     document.getElementById('request-form').addEventListener('submit', handleRequestSubmit);
 }
 
-// ==================== PHASE 3A: REGISTRATION ====================
+
 // Processes user registration and creates new account
 function handleRegister(e) {
     // Prevent form from reloading page
@@ -309,8 +305,7 @@ function handleRegister(e) {
     navigateTo('#/verify-email');
 }
 
-// ==================== PHASE 3B: EMAIL VERIFICATION ====================
-// Simulates email verification by updating account status
+
 function handleVerifyEmail() {
     // Retrieve pending verification email
     const email = localStorage.getItem('unverified_email');
@@ -340,8 +335,7 @@ function handleVerifyEmail() {
     }
 }
 
-// ==================== PHASE 3C: LOGIN ====================
-// Authenticates user and establishes session
+
 function handleLogin(e) {
     // Prevent form from reloading page
     e.preventDefault();
@@ -371,8 +365,6 @@ function handleLogin(e) {
     }
 }
 
-// ==================== PHASE 3E: LOGOUT ====================
-// Terminates user session and resets state
 function handleLogout(e) {
     // Prevent default link behavior
     e.preventDefault();
@@ -388,8 +380,7 @@ function handleLogout(e) {
     navigateTo('#/');
 }
 
-// ==================== PHASE 5: PROFILE RENDERING ====================
-// Displays logged-in user's profile information
+
 function renderProfile() {
     // Guard: only render if user is logged in
     if (!currentUser) return;
@@ -412,8 +403,6 @@ function renderProfile() {
     document.getElementById('profile-content').innerHTML = html;
 }
 
-// ==================== PHASE 6B: EMPLOYEES CRUD ====================
-// Displays all employees in a table with linked account and department data
 function renderEmployeesList() {
     const employees = window.db.employees;
     let html = '';
@@ -465,7 +454,7 @@ function renderEmployeesList() {
     document.getElementById('employees-list').innerHTML = html;
 }
 
-// Shows employee form for adding or editing
+
 function showEmployeeForm(employeeId = null) {
     const container = document.getElementById('employee-form-container');
     const form = document.getElementById('employee-form');
@@ -498,13 +487,12 @@ function showEmployeeForm(employeeId = null) {
     container.classList.remove('d-none');
 }
 
-// Hides employee form and resets fields
+
 function hideEmployeeForm() {
     document.getElementById('employee-form-container').classList.add('d-none');
     document.getElementById('employee-form').reset();
 }
 
-// Processes employee form submission (create or update)
 function handleEmployeeSubmit(e) {
     // Prevent form from reloading page
     e.preventDefault();
@@ -557,12 +545,11 @@ function handleEmployeeSubmit(e) {
     renderEmployeesList();
 }
 
-// Opens employee form in edit mode
 function editEmployee(id) {
     showEmployeeForm(id);
 }
 
-// Deletes employee after confirmation
+
 function deleteEmployee(id) {
     if (confirm('Delete this employee?')) {
         // Filter out employee with matching ID
@@ -573,8 +560,6 @@ function deleteEmployee(id) {
     }
 }
 
-// ==================== PHASE 6C: DEPARTMENTS ====================
-// Displays all departments in a table
 function renderDepartmentsList() {
     const departments = window.db.departments;
     let html = '';
@@ -616,8 +601,7 @@ function renderDepartmentsList() {
     document.getElementById('departments-list').innerHTML = html;
 }
 
-// ==================== PHASE 6A: ACCOUNTS CRUD ====================
-// Displays all user accounts in a table with management actions
+
 function renderAccountsList() {
     const accounts = window.db.accounts;
     let html = '';
@@ -664,7 +648,7 @@ function renderAccountsList() {
     document.getElementById('accounts-list').innerHTML = html;
 }
 
-// Shows account form for adding or editing
+
 function showAccountForm(accountId = null) {
     const container = document.getElementById('account-form-container');
     const form = document.getElementById('account-form');
@@ -692,13 +676,13 @@ function showAccountForm(accountId = null) {
     container.classList.remove('d-none');
 }
 
-// Hides account form and resets fields
+
 function hideAccountForm() {
     document.getElementById('account-form-container').classList.add('d-none');
     document.getElementById('account-form').reset();
 }
 
-// Processes account form submission (create or update)
+
 function handleAccountSubmit(e) {
     // Prevent form from reloading page
     e.preventDefault();
@@ -767,12 +751,11 @@ function handleAccountSubmit(e) {
     renderAccountsList();
 }
 
-// Opens account form in edit mode
+
 function editAccount(id) {
     showAccountForm(id);
 }
 
-// Resets account password with validation
 function resetPassword(id) {
     const newPassword = prompt('Enter new password (min 6 characters):');
     if (newPassword && newPassword.length >= 6) {
@@ -788,7 +771,6 @@ function resetPassword(id) {
     }
 }
 
-// Deletes account with safety checks
 function deleteAccount(id) {
     // Prevent user from deleting their own account
     if (currentUser && currentUser.id === id) {
@@ -805,8 +787,7 @@ function deleteAccount(id) {
     }
 }
 
-// ==================== PHASE 7: USER REQUESTS ====================
-// Displays current user's requests with status badges
+
 function renderRequestsList() {
     // Filter to show only current user's requests (data privacy)
     const requests = window.db.requests.filter(req => req.employeeEmail === currentUser.email);
@@ -863,7 +844,7 @@ function renderRequestsList() {
     document.getElementById('requests-list').innerHTML = html;
 }
 
-// Opens modal for creating new request
+
 function showRequestModal() {
     // Create Bootstrap modal instance
     const modal = new bootstrap.Modal(document.getElementById('requestModal'));
@@ -884,7 +865,6 @@ function showRequestModal() {
     modal.show();
 }
 
-// Adds new item input row to request form
 function addRequestItem() {
     const container = document.getElementById('request-items');
 
@@ -906,7 +886,6 @@ function addRequestItem() {
     container.appendChild(newItem);
 }
 
-// Processes request form submission
 function handleRequestSubmit(e) {
     // Prevent form from reloading page
     e.preventDefault();
@@ -955,14 +934,13 @@ function handleRequestSubmit(e) {
     renderRequestsList();
 }
 
-// ==================== PHASE 8: UTILITY FUNCTIONS ====================
-// Generates unique ID for database records
+
 function generateId() {
     // Combines timestamp (base36) with random string for uniqueness
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
-// Displays temporary toast notification to user
+
 function showToast(message, type = 'info') {
     // Create container if it doesn't exist
     let container = document.querySelector('.toast-container');
