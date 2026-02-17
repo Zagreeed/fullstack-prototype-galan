@@ -396,7 +396,7 @@ function renderProfile() {
         <div class="mb-3">
             <strong>Role:</strong> ${currentUser.role}
         </div>
-        <button class="btn btn-primary" onclick="alert('Edit profile not fully implemented')">Edit Profile</button>
+        <button class="btn btn-outline-primary" onclick="alert('Edit profile not fully implemented')">Edit Profile</button>
     `;
 
     // Inject HTML into profile container
@@ -440,8 +440,8 @@ function renderEmployeesList() {
                     <td>${emp.position}</td>
                     <td>${dept ? dept.name : 'N/A'}</td>
                     <td class="table-actions">
-                        <button class="btn btn-sm btn-primary" onclick="editEmployee('${emp.id}')">Edit</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${emp.id}')">Delete</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editEmployee('${emp.id}')">Edit</button>
+                        <button class="btn btn-outline-danger" onclick="deleteEmployee('${emp.id}')">Delete</button>
                     </td>
                 </tr>
             `;
@@ -587,8 +587,8 @@ function renderDepartmentsList() {
                     <td>${dept.name}</td>
                     <td>${dept.description}</td>
                     <td class="table-actions">
-                        <button class="btn btn-sm btn-primary" onclick="alert('Edit not implemented')">Edit</button>
-                        <button class="btn btn-sm btn-danger" onclick="alert('Delete not implemented')">Delete</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Edit not implemented')">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="alert('Delete not implemented')">Delete</button>
                     </td>
                 </tr>
             `;
@@ -633,9 +633,9 @@ function renderAccountsList() {
                     <td>${acc.role}</td>
                     <td>${acc.verified ? '✅' : '—'}</td>
                     <td class="table-actions">
-                        <button class="btn btn-sm btn-primary" onclick="editAccount('${acc.id}')">Edit</button>
-                        <button class="btn btn-sm btn-warning" onclick="resetPassword('${acc.id}')">Reset Password</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteAccount('${acc.id}')">Delete</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editAccount('${acc.id}')">Edit</button>
+                        <button class="btn btn-outline-warning" onclick="resetPassword('${acc.id}')">Reset Password</button>
+                        <button class="btn btn-outline-danger" onclick="deleteAccount('${acc.id}')">Delete</button>
                     </td>
                 </tr>
             `;
