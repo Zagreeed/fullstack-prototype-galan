@@ -336,33 +336,29 @@ function handleVerifyEmail() {
 }
 
 
-function handleLogin(e) {
-    // Prevent form from reloading page
-    e.preventDefault();
+async function handleLogin(username, password) {
 
-    // Capture credentials
-    const email = document.getElementById('login-email').value.trim().toLowerCase();
-    const password = document.getElementById('login-password').value;
+    try {
+        const response = await fetch("http://localhost:3000/api/login", {
+            method: "POST",
+            header: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        })
 
-    // Search for account with matching credentials AND verified status
-    const account = window.db.accounts.find(
-        acc => acc.email === email && acc.password === password && acc.verified
-    );
 
-    if (account) {
-        // Store email as auth token in localStorage
-        localStorage.setItem('auth_token', email);
+        const data = await response.json()
 
-        // Update authentication state and UI
-        setAuthState(true, account);
+        if (response.ok) {
+            sessionStorage.setItem("authToken", data.token)
 
-        // Notify user and redirect to profile
-        showToast('Login successful!', 'success');
-        navigateTo('#/profile');
-    } else {
-        // Show error for invalid credentials or unverified email
-        showToast('Invalid credentials or unverified email', 'danger');
+        }
+
+
+    } catch (error) {
+
     }
+
+
 }
 
 function handleLogout(e) {
