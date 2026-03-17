@@ -46,6 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('hashchange', handleRouting);
 });
 
+function getAuthHeader() {
+    const token = sessionStorage.getItem("authToken");
+    return { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+}
+
 
 function loadFromStorage() {
     try {
@@ -260,51 +265,35 @@ function initializeEventListeners() {
 
 
 // Processes user registration and creates new account
-function handleRegister(e) {
-    // Prevent form from reloading page
+async function handleRegister(e) {
     e.preventDefault();
 
-    // Capture and sanitize form values
-    const firstName = document.getElementById('reg-firstname').value.trim();
+    const firstName = document.getElementById('reg-firstname').value.trim()
     const lastName = document.getElementById('reg-lastname').value.trim();
-    const email = document.getElementById('reg-email').value.trim().toLowerCase();  // Normalize email
+    const email = document.getElementById('reg-email').value.trim()
     const password = document.getElementById('reg-password').value;
 
-    // Check if email already exists in database
-    if (window.db.accounts.find(acc => acc.email === email)) {
-        showToast('Email already registered', 'danger');
-        return;
+    try {
+        const response = await fetch("http://localhost:3000/api/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ firstName, lastName, email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.error || 'Registration failed', 'danger');
+            return;
+        }
+
+        showToast('Account created! You may now log in.', 'success');
+        navigateTo('#/login');
+
+    } catch (err) {
+        showToast('Cannot reach server. Is it running on port 3000?', 'danger');
     }
-
-    // Validate password meets minimum length requirement
-    if (password.length < 6) {
-        showToast('Password must be at least 6 characters', 'danger');
-        return;
-    }
-
-    // Create new account object with default values
-    const newAccount = {
-        id: generateId(),
-        firstName,
-        lastName,
-        email,
-        password,
-        role: 'User',         // Default role for new accounts
-        verified: false       // Requires email verification
-    };
-
-    // Add to database and persist
-    window.db.accounts.push(newAccount);
-    saveToStorage();
-
-    // Store email for verification flow
-    localStorage.setItem('unverified_email', email);
-
-    // Notify user and redirect to verification page
-    showToast('Account created! Please verify your email.', 'success');
-    navigateTo('#/verify-email');
 }
-
 
 function handleVerifyEmail() {
     // Retrieve pending verification email
@@ -336,29 +325,44 @@ function handleVerifyEmail() {
 }
 
 
-async function handleLogin(username, password) {
+async function handleLogin(e) {
+    e.preventDefault();
+
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
 
     try {
         const response = await fetch("http://localhost:3000/api/login", {
             method: "POST",
-            header: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password })
-        })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
 
+        const data = await response.json();
 
-        const data = await response.json()
-
-        if (response.ok) {
-            sessionStorage.setItem("authToken", data.token)
-
+        if (!response.ok) {
+            showToast(data.error || 'Invalid credentials', 'danger');
+            return;
         }
 
+        sessionStorage.setItem("authToken", data.token);
 
-    } catch (error) {
 
+        const user = {
+            id: data.user.id,
+            firstName: data.user.firstName,
+            lastName: data.user.lastName,
+            email: data.user.email,
+            role: data.user.role
+        };
+
+        setAuthState(true, user);
+        showToast('Login successful!', 'success');
+        navigateTo('#/profile');
+
+    } catch (err) {
+        showToast('Cannot reach server. Is it running on port 3000?', 'danger');
     }
-
-
 }
 
 function handleLogout(e) {
