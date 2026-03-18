@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function getAuthHeader() {
     const token = sessionStorage.getItem("authToken");
-    return { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+    return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 
@@ -113,6 +113,38 @@ function navigateTo(hash) {
     window.location.hash = hash;
 }
 
+
+async function loadAdminDashBoard() {
+    const res = await fetch("http://localhost::3000/api/admin/dashbaord", {
+        headers: getAuthHeader()
+    })
+
+    if (res.ok) {
+        const data = await res.json()
+
+
+        const dashboardHtml = `
+            <div class="alert alert-success mt-3">
+                <strong>Admin Dashboard</strong><br/>
+                ${data.message}<br/>
+                <small class="text-muted">${data.data}</small>
+            </div>
+        `;
+
+        const homePage = document.getElementById('home-page');
+
+        if (!homePage.querySelector('.alert-success')) {
+            homePage.insertAdjacentHTML('beforeend', dashboardHtml);
+        }
+
+
+
+    } else {
+        showToast(data.error || 'Failed to load dashboard', 'danger');
+        return;
+    }
+}
+
 // Main routing logic - decides which page to show based on URL hash
 function handleRouting() {
     // Get current hash or default to home
@@ -135,7 +167,7 @@ function handleRouting() {
     }
 
     // Block non-admin users from admin routes
-    if (adminRoutes.includes(route) && (!currentUser || currentUser.role !== 'Admin')) {
+    if (adminRoutes.includes(route) && (!currentUser || currentUser.role !== 'admin')) {
         showToast('Access denied. Admin only.', 'danger');
         navigateTo('#/');
         return;
@@ -211,7 +243,7 @@ function setAuthState(isAuth, user = null) {
         body.classList.add('authenticated');
 
         // Add admin class if user has admin role
-        if (user.role === 'Admin') {
+        if (user.role === 'admin') {
             body.classList.add('is-admin');
         } else {
             body.classList.remove('is-admin');
@@ -342,6 +374,8 @@ async function handleLogin(e) {
 
         if (!response.ok) {
             showToast(data.error || 'Invalid credentials', 'danger');
+
+            console.log(`EMAIL: ${email}    PASSWORD: ${password}`)
             return;
         }
 
