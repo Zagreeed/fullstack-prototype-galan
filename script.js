@@ -13,48 +13,38 @@ window.db = {
 };
 
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
+    // Load data from localStorage
+    loadFromStorage();
+
+    // Set up all event listeners
     initializeEventListeners();
 
+    // Set initial route to home if no hash exists
     if (!window.location.hash) {
         window.location.hash = '#/';
     }
 
-
-    const token = sessionStorage.getItem('authToken');
-    if (token) {
-        try {
-            const response = await fetch("http://localhost:3000/api/profile", {
-                headers: getAuthHeader()
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                const user = {
-                    id: data.user.id,
-                    firstName: data.user.firstName || data.user.username,
-                    lastName: data.user.lastName || '',
-                    email: data.user.email || '',
-                    role: data.user.role
-                };
-                setAuthState(true, user);
-            } else {
-
-                sessionStorage.removeItem('authToken');
-            }
-        } catch (err) {
-            sessionStorage.removeItem('authToken');
+    // Restore user session if valid auth token exists
+    const authToken = localStorage.getItem('auth_token');
+    if (authToken) {
+        // Find user with matching email and verified status
+        const user = window.db.accounts.find(acc => acc.email === authToken && acc.verified);
+        if (user) {
+            // Restore authentication state
+            setAuthState(true, user);
+        } else {
+            // Clear invalid token
+            localStorage.removeItem('auth_token');
         }
     }
 
+    // Display initial page based on current hash
     handleRouting();
+
+    // Listen for URL hash changes to update displayed page
     window.addEventListener('hashchange', handleRouting);
 });
-
-function getAuthHeader() {
-    const token = sessionStorage.getItem("authToken");
-    return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 
 function loadFromStorage() {
@@ -118,38 +108,6 @@ function navigateTo(hash) {
     window.location.hash = hash;
 }
 
-
-async function loadAdminDashBoard() {
-    const res = await fetch("http://localhost:3000/api/admin/dashbaord", {
-        headers: getAuthHeader()
-    })
-
-    if (res.ok) {
-        const data = await res.json()
-
-
-        const dashboardHtml = `
-            <div class="alert alert-success mt-3">
-                <strong>Admin Dashboard</strong><br/>
-                ${data.message}<br/>
-                <small class="text-muted">${data.data}</small>
-            </div>
-        `;
-
-        const homePage = document.getElementById('home-page');
-
-        if (!homePage.querySelector('.alert-success')) {
-            homePage.insertAdjacentHTML('beforeend', dashboardHtml);
-        }
-
-
-
-    } else {
-        showToast(data.error || 'Failed to load dashboard', 'danger');
-        return;
-    }
-}
-
 // Main routing logic - decides which page to show based on URL hash
 function handleRouting() {
     // Get current hash or default to home
@@ -172,7 +130,7 @@ function handleRouting() {
     }
 
     // Block non-admin users from admin routes
-    if (adminRoutes.includes(route) && (!currentUser || currentUser.role !== 'admin')) {
+    if (adminRoutes.includes(route) && (!currentUser || currentUser.role !== 'Admin')) {
         showToast('Access denied. Admin only.', 'danger');
         navigateTo('#/');
         return;
@@ -184,9 +142,6 @@ function handleRouting() {
         case '':
         case '/':
             pageId = 'home-page';
-            if (currentUser && currentUser.role === 'admin') {
-                loadAdminDashBoard();
-            }
             break;
         case 'register':
             pageId = 'register-page';
@@ -251,7 +206,7 @@ function setAuthState(isAuth, user = null) {
         body.classList.add('authenticated');
 
         // Add admin class if user has admin role
-        if (user.role === 'admin') {
+        if (user.role === 'Admin') {
             body.classList.add('is-admin');
         } else {
             body.classList.remove('is-admin');
@@ -305,35 +260,51 @@ function initializeEventListeners() {
 
 
 // Processes user registration and creates new account
-async function handleRegister(e) {
+function handleRegister(e) {
+    // Prevent form from reloading page
     e.preventDefault();
 
-    const firstName = document.getElementById('reg-firstname').value.trim()
+    // Capture and sanitize form values
+    const firstName = document.getElementById('reg-firstname').value.trim();
     const lastName = document.getElementById('reg-lastname').value.trim();
-    const email = document.getElementById('reg-email').value.trim()
+    const email = document.getElementById('reg-email').value.trim().toLowerCase();  // Normalize email
     const password = document.getElementById('reg-password').value;
 
-    try {
-        const response = await fetch("http://localhost:3000/api/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ firstName, lastName, email, password })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            showToast(data.error || 'Registration failed', 'danger');
-            return;
-        }
-
-        showToast('Account created! You may now log in.', 'success');
-        navigateTo('#/login');
-
-    } catch (err) {
-        showToast('Cannot reach server. Is it running on port 3000?', 'danger');
+    // Check if email already exists in database
+    if (window.db.accounts.find(acc => acc.email === email)) {
+        showToast('Email already registered', 'danger');
+        return;
     }
+
+    // Validate password meets minimum length requirement
+    if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'danger');
+        return;
+    }
+
+    // Create new account object with default values
+    const newAccount = {
+        id: generateId(),
+        firstName,
+        lastName,
+        email,
+        password,
+        role: 'User',         // Default role for new accounts
+        verified: false       // Requires email verification
+    };
+
+    // Add to database and persist
+    window.db.accounts.push(newAccount);
+    saveToStorage();
+
+    // Store email for verification flow
+    localStorage.setItem('unverified_email', email);
+
+    // Notify user and redirect to verification page
+    showToast('Account created! Please verify your email.', 'success');
+    navigateTo('#/verify-email');
 }
+
 
 function handleVerifyEmail() {
     // Retrieve pending verification email
@@ -365,90 +336,71 @@ function handleVerifyEmail() {
 }
 
 
-async function handleLogin(e) {
+function handleLogin(e) {
+    // Prevent form from reloading page
     e.preventDefault();
 
-    const email = document.getElementById('login-email').value.trim();
+    // Capture credentials
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
     const password = document.getElementById('login-password').value;
 
-    try {
-        const response = await fetch("http://localhost:3000/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password })
-        });
+    // Search for account with matching credentials AND verified status
+    const account = window.db.accounts.find(
+        acc => acc.email === email && acc.password === password && acc.verified
+    );
 
-        const data = await response.json();
+    if (account) {
+        // Store email as auth token in localStorage
+        localStorage.setItem('auth_token', email);
 
-        if (!response.ok) {
-            showToast(data.error || 'Invalid credentials', 'danger');
+        // Update authentication state and UI
+        setAuthState(true, account);
 
-            console.log(`EMAIL: ${email}    PASSWORD: ${password}`)
-            return;
-        }
-
-        sessionStorage.setItem("authToken", data.token);
-
-
-        const user = {
-            id: data.user.id,
-            firstName: data.user.firstName,
-            lastName: data.user.lastName,
-            email: data.user.email,
-            role: data.user.role
-        };
-
-        setAuthState(true, user);
+        // Notify user and redirect to profile
         showToast('Login successful!', 'success');
         navigateTo('#/profile');
-
-    } catch (err) {
-        showToast('Cannot reach server. Is it running on port 3000?', 'danger');
+    } else {
+        // Show error for invalid credentials or unverified email
+        showToast('Invalid credentials or unverified email', 'danger');
     }
 }
 
 function handleLogout(e) {
+    // Prevent default link behavior
     e.preventDefault();
-    sessionStorage.removeItem('authToken');
+
+    // Remove auth token to destroy session
+    localStorage.removeItem('auth_token');
+
+    // Reset UI to logged-out state
     setAuthState(false);
+
+    // Notify user and redirect to home
     showToast('Logged out successfully', 'info');
     navigateTo('#/');
 }
 
 
-async function renderProfile() {
+function renderProfile() {
+    // Guard: only render if user is logged in
     if (!currentUser) return;
 
-    try {
-        const response = await fetch("http://localhost:3000/api/profile", {
-            headers: getAuthHeader()
-        });
+    // Generate profile HTML with user data
+    const html = `
+        <div class="mb-3">
+            <h4>${currentUser.firstName} ${currentUser.lastName}</h4>
+        </div>
+        <div class="mb-2">
+            <strong>Email:</strong> ${currentUser.email}
+        </div>
+        <div class="mb-3">
+            <strong>Role:</strong> ${currentUser.role}
+        </div>
+        <button class="btn btn-outline-primary" onclick="alert('Edit profile not fully implemented')">Edit Profile</button>
+    `;
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            showToast(data.error || 'Failed to load profile', 'danger');
-            return;
-        }
-
-        const user = data.user;
-        document.getElementById('profile-content').innerHTML = `
-            <div class="mb-3">
-                <h4>${currentUser.firstName} ${currentUser.lastName}</h4>
-            </div>
-            <div class="mb-2">
-                <strong>Email:</strong> ${currentUser.email}
-            </div>
-            <div class="mb-2">
-                <strong>Role:</strong> ${user.role}
-            </div>
-            <div class="mb-2">
-                <strong>ID:</strong> ${user.id}
-            </div>
-        `;
-    } catch (err) {
-        showToast('Cannot reach server.', 'danger');
-    }
+    // Inject HTML into profile container
+    document.getElementById('profile-content').innerHTML = html;
 }
 
 function renderEmployeesList() {
