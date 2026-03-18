@@ -13,36 +13,41 @@ window.db = {
 };
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Load data from localStorage
-    loadFromStorage();
-
-    // Set up all event listeners
+document.addEventListener('DOMContentLoaded', async () => {
     initializeEventListeners();
 
-    // Set initial route to home if no hash exists
     if (!window.location.hash) {
         window.location.hash = '#/';
     }
 
-    // Restore user session if valid auth token exists
-    const authToken = localStorage.getItem('auth_token');
-    if (authToken) {
-        // Find user with matching email and verified status
-        const user = window.db.accounts.find(acc => acc.email === authToken && acc.verified);
-        if (user) {
-            // Restore authentication state
-            setAuthState(true, user);
-        } else {
-            // Clear invalid token
-            localStorage.removeItem('auth_token');
+
+    const token = sessionStorage.getItem('authToken');
+    if (token) {
+        try {
+            const response = await fetch("http://localhost:3000/api/profile", {
+                headers: getAuthHeader()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const user = {
+                    id: data.user.id,
+                    firstName: data.user.firstName || data.user.username,
+                    lastName: data.user.lastName || '',
+                    email: data.user.email || '',
+                    role: data.user.role
+                };
+                setAuthState(true, user);
+            } else {
+
+                sessionStorage.removeItem('authToken');
+            }
+        } catch (err) {
+            sessionStorage.removeItem('authToken');
         }
     }
 
-    // Display initial page based on current hash
     handleRouting();
-
-    // Listen for URL hash changes to update displayed page
     window.addEventListener('hashchange', handleRouting);
 });
 
@@ -115,7 +120,7 @@ function navigateTo(hash) {
 
 
 async function loadAdminDashBoard() {
-    const res = await fetch("http://localhost::3000/api/admin/dashbaord", {
+    const res = await fetch("http://localhost:3000/api/admin/dashbaord", {
         headers: getAuthHeader()
     })
 
@@ -179,6 +184,9 @@ function handleRouting() {
         case '':
         case '/':
             pageId = 'home-page';
+            if (currentUser && currentUser.role === 'admin') {
+                loadAdminDashBoard();
+            }
             break;
         case 'register':
             pageId = 'register-page';
@@ -400,41 +408,47 @@ async function handleLogin(e) {
 }
 
 function handleLogout(e) {
-    // Prevent default link behavior
     e.preventDefault();
-
-    // Remove auth token to destroy session
-    localStorage.removeItem('auth_token');
-
-    // Reset UI to logged-out state
+    sessionStorage.removeItem('authToken');
     setAuthState(false);
-
-    // Notify user and redirect to home
     showToast('Logged out successfully', 'info');
     navigateTo('#/');
 }
 
 
-function renderProfile() {
-    // Guard: only render if user is logged in
+async function renderProfile() {
     if (!currentUser) return;
 
-    // Generate profile HTML with user data
-    const html = `
-        <div class="mb-3">
-            <h4>${currentUser.firstName} ${currentUser.lastName}</h4>
-        </div>
-        <div class="mb-2">
-            <strong>Email:</strong> ${currentUser.email}
-        </div>
-        <div class="mb-3">
-            <strong>Role:</strong> ${currentUser.role}
-        </div>
-        <button class="btn btn-outline-primary" onclick="alert('Edit profile not fully implemented')">Edit Profile</button>
-    `;
+    try {
+        const response = await fetch("http://localhost:3000/api/profile", {
+            headers: getAuthHeader()
+        });
 
-    // Inject HTML into profile container
-    document.getElementById('profile-content').innerHTML = html;
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.error || 'Failed to load profile', 'danger');
+            return;
+        }
+
+        const user = data.user;
+        document.getElementById('profile-content').innerHTML = `
+            <div class="mb-3">
+                <h4>${currentUser.firstName} ${currentUser.lastName}</h4>
+            </div>
+            <div class="mb-2">
+                <strong>Email:</strong> ${currentUser.email}
+            </div>
+            <div class="mb-2">
+                <strong>Role:</strong> ${user.role}
+            </div>
+            <div class="mb-2">
+                <strong>ID:</strong> ${user.id}
+            </div>
+        `;
+    } catch (err) {
+        showToast('Cannot reach server.', 'danger');
+    }
 }
 
 function renderEmployeesList() {
